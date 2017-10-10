@@ -10,7 +10,8 @@ import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
-from tensorflow.models.image.cifar10 import cifar10
+#from tensorflow.models.image.cifar10 import cifar10
+import cifar10
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -29,7 +30,8 @@ tf.app.flags.DEFINE_integer('task_id', 0, 'Task ID of the worker/replica running
 tf.app.flags.DEFINE_string('train_dir', '/tmp/cifar10_train',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_integer('max_steps', 1000000,
+#tf.app.flags.DEFINE_integer('max_steps', 1000000,
+tf.app.flags.DEFINE_integer('max_steps', 1000,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_boolean('log_device_placement', False,
                             """Whether to log device placement.""")
@@ -87,7 +89,7 @@ def train():
                                             decay_steps,
                                             LEARNING_RATE_DECAY_FACTOR,
                                             staircase=True)
-            tf.scalar_summary('learning_rate', lr)
+            tf.summary.scalar('learning_rate', lr)
             opt = tf.train.GradientDescentOptimizer(lr)
 
             # Track the moving averages of all trainable variables.
@@ -97,7 +99,7 @@ def train():
             opt = tf.train.SyncReplicasOptimizer(
                 opt,
                 replicas_to_aggregate=len(worker_hosts),
-                replica_id=FLAGS.task_id,
+#                replica_id=FLAGS.task_id,
                 total_num_replicas=len(worker_hosts),
                 variable_averages=exp_moving_averager,
                 variables_to_average=variables_to_average)
@@ -109,7 +111,7 @@ def train():
             # Add histograms for gradients.
             for grad, var in grads:
                 if grad is not None:
-                    tf.histogram_summary(var.op.name + '/gradients', grad)
+                    tf.summary.histogram(var.op.name + '/gradients', grad)
 
             apply_gradients_op = opt.apply_gradients(grads, global_step=global_step)
 
@@ -128,7 +130,7 @@ def train():
             sv = tf.train.Supervisor(is_chief=is_chief,
                                      logdir=FLAGS.train_dir,
                                      init_op=tf.initialize_all_variables(),
-                                     summary_op=tf.merge_all_summaries(),
+                                     summary_op=tf.summary.merge_all(),
                                      global_step=global_step,
                                      saver=saver,
                                      save_model_secs=60)
